@@ -1,27 +1,32 @@
 # RVC v2 Dataset Creation Tool
+ -Download the audio from the specified YouTube video.
+ -Separate the vocals from the background noise.
+ -Split the vocals into smaller segments.
+ -Package the processed segments into a ZIP file named dataset_my_audio.zip.
+ 
+## Requirements
 
-[![Replicate](https://replicate.com/zsxkib/create-rvc-dataset/badge)](https://replicate.com/zsxkib/create-rvc-dataset)
+Make sure you have the following Python packages installed:
+```bash
+pip install yt-dlp ffmpeg-python numpy==1.26.4 librosa soundfile demucs
+```
 
-## Introduction
-Create vocal datasets for Realistic Voice Cloning (RVC) v2 models with ease. Simply provide a YouTube video URL and let the tool handle the extraction and preparation of vocal data, ideal for training sophisticated voice cloning models. 🧠🎤
+Additionally, make sure ffmpeg is installed on your system.
 
-## Features
-- **Easy Input**: Paste the URL and optionally name your dataset. 📌
-- **Automated Processing**: Isolates vocals and segments them into clips. ⚙️
-- **Immediate Download**: Access your dataset with a click. 💾
+## Usage
 
-## How to Use
-1. **YouTube URL**: Input the link to the video. 🖇️
-2. **Dataset Name**: Choose a name or stick with the default. ✏️
-3. **Run**: Hit 'Run' to begin the magic. 🚀
-4. **Download**: Grab your `.zip` file full of vocal clips. 📦
+To use the script, run it from the command line with the following syntax:
 
-## What You Get
-- The output is a `.zip` file titled `dataset/<your_dataset_name>/`.
-- It houses `split_<i>.mp3` files, each containing a clear vocal extract. 🎶
+python process_audio.py <YouTube URL> <audio name>
 
-## Training Your Model
-Once you have your dataset, head over to `https://replicate.com/zsxkib/train-rvc-v2` to train your RVC v2 model on your newly created dataset. 🚀
+    <YouTube URL>: The URL of the YouTube video you want to process.
+    <audio name>: A name for the audio processing, which will be used for naming the files and folders.
 
-## Acknowledgments
-This tool is adapted from work by the talented [ardha27](https://github.com/ardha27/AI-Song-Cover-RVC), who authored the initial codebase available [here](https://colab.research.google.com/github/ardha27/AI-Song-Cover-RVC/blob/main/Download_Youtube_WAV_and_Splitting_Audio.ipynb). 🙏
+## Example
+```bash
+python process_audio.py https://www.youtube.com/watch?v=DEqXNfs_HhY my_audio
+```
+
+## Output
+The processed audio segments are stored in a directory dataset/<audio name>.
+These segments are then packaged into a ZIP file named dataset_<audio_name>.zip located in the current directory.
