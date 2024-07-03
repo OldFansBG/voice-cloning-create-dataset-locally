@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import numpy as np
 import librosa
-import soundfile
+import soundfile as sf
 import sys
 import zipfile
 
@@ -119,19 +119,7 @@ class Slicer:
                 chunks.append(self._apply_slice(waveform, sil_tags[-1][1], total_frames))
             return chunks
 
-def process_audio(youtube_url: str, audio_name: str):
-    # Empty old folders
-    folders = [
-        f"local_audio/{audio_name}",
-        f"dataset/{audio_name}",
-    ]
-    for folder in folders:
-        try:
-            shutil.rmtree(folder)
-        except FileNotFoundError:
-            pass
-
-    # Download Youtube WAV
+def download_audio(youtube_url: str, audio_name: str):
     ydl_opts = {
         "format": "bestaudio/best",
         "postprocessors": [
@@ -145,29 +133,52 @@ def process_audio(youtube_url: str, audio_name: str):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([youtube_url])
 
+def process_audio(audio_source: str, audio_name: str, use_cuda: bool):
+    # Empty old folders
+    folders = [
+        f"local_audio/{audio_name}",
+        f"dataset/{audio_name}",
+    ]
+    for folder in folders:
+        try:
+            shutil.rmtree(folder)
+        except FileNotFoundError:
+            pass
+
+    if audio_source.startswith("http"):
+        download_audio(audio_source, audio_name)
+        AUDIO_INPUT = f"local_audio/{audio_name}.wav"
+    else:
+        AUDIO_INPUT = audio_source
+
     # Separate Vocal and Instrument/Noise using Demucs
-    AUDIO_INPUT = f"local_audio/{audio_name}.wav"
-    command = f"demucs --two-stems=vocals {AUDIO_INPUT}"
+    demucs_option = "--two-stems=vocals"
+    device = "cuda" if use_cuda else "cpu"
+    command = f"demucs {demucs_option} -d {device} {AUDIO_INPUT}"
     print(f"Running: {command}")
     process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
     output, _ = process.communicate()
     print(output.decode())
 
+    vocals_path = f"separated/htdemucs/{audio_name}/vocals.wav"
+    if not os.path.exists(vocals_path):
+        print(f"Error: {vocals_path} not found. Demucs might have failed.")
+        sys.exit(1)
+
     os.makedirs(f"dataset/{audio_name}", exist_ok=True)
-    audio, sr = librosa.load(f"separated/htdemucs/{audio_name}/vocals.wav", sr=None, mono=False)
-    slicer = Slicer(
-        sr=sr,
-        threshold=-40,
-        min_length=5000,
-        min_interval=500,
-        hop_size=10,
-        max_sil_kept=500,
-    )
+    try:
+        audio, sr = sf.read(vocals_path, always_2d=True)
+        audio = audio.T if audio.shape[0] > 1 else audio[0]
+    except Exception as e:
+        print(f"Error loading audio: {e}")
+        sys.exit(1)
+
+    slicer = Slicer(sr=sr, threshold=-40, min_length=5000, min_interval=500, hop_size=10, max_sil_kept=500)
     chunks = slicer.slice(audio)
     for i, chunk in enumerate(chunks):
         if len(chunk.shape) > 1:
             chunk = chunk.T
-        soundfile.write(f"dataset/{audio_name}/split_{i}.wav", chunk, sr)
+        sf.write(f"dataset/{audio_name}/split_{i}.wav", chunk, sr)
 
     # Create a zip file of the dataset
     output_zip_path = f"dataset_{audio_name}.zip"
@@ -175,14 +186,31 @@ def process_audio(youtube_url: str, audio_name: str):
         for root, dirs, files in os.walk(f"dataset/{audio_name}"):
             for file in files:
                 zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), f"dataset/{audio_name}"))
-    
+
     print(f"Created zip file at {output_zip_path}")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python process_audio.py <YouTube URL> <audio name>")
+    print("Select processing mode:")
+    print("1. CPU")
+    print("2. CUDA (GPU)")
+
+    mode = input("Enter 1 or 2: ").strip()
+    use_cuda = mode == "2"
+
+    print("Select audio source:")
+    print("1. YouTube URL")
+    print("2. Local directory with files")
+
+    source_option = input("Enter 1 or 2: ").strip()
+
+    if source_option == "1":
+        audio_source = input("Enter the YouTube URL: ").strip()
+    elif source_option == "2":
+        audio_source = input("Enter the path to the local directory: ").strip()
+    else:
+        print("Invalid option")
         sys.exit(1)
-    
-    youtube_url = sys.argv[1]
-    audio_name = sys.argv[2]
-    process_audio(youtube_url, audio_name)
+
+    audio_name = input("Enter the name for the dataset: ").strip()
+
+    process_audio(audio_source, audio_name, use_cuda)
