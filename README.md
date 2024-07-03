@@ -26,3 +26,11 @@ python process_audio.py https://www.youtube.com/watch?v=DEqXNfs_HhY my_audio
 ## Output
 The processed audio segments are stored in a directory dataset/<audio name>.
 These segments are then packaged into a ZIP file named dataset_<audio_name>.zip located in the current directory.
+
+## Credits
+
+This script is based on the repository [voice-cloning-create-dataset](https://github.com/zsxkib/voice-cloning-create-dataset) by [zsxkib](https://github.com/zsxkib).
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
