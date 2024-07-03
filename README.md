@@ -1,8 +1,4 @@
 # RVC v2 Dataset Creation Tool
- -Download the audio from the specified YouTube video.
- -Separate the vocals from the background noise.
- -Split the vocals into smaller segments.
- -Package the processed segments into a ZIP file named dataset_my_audio.zip.
  
 ## Requirements
 
